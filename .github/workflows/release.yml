@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 0.4.0)'
+        required: true
+        default: '0.0.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version: $VERSION"
+
+      - name: Restore
+        run: dotnet restore PrinterCollector.csproj
+
+      - name: Publish single-file EXE (win-x64, self-contained)
+        run: >
+          dotnet publish PrinterCollector.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:AssemblyVersion=${{ steps.ver.outputs.version }}.0
+          -p:FileVersion=${{ steps.ver.outputs.version }}.0
+          -o publish
+
+      - name: Install WiX 4
+        run: dotnet tool install --global wix
+
+      - name: Build MSI
+        run: >
+          wix build installer/PrinterCollector.wxs
+          -arch x64
+          -d Version=${{ steps.ver.outputs.version }}
+          -d PublishDir=publish
+          -o PrinterCollector-${{ steps.ver.outputs.version }}.msi
+
+      - name: Stage release artifacts
+        shell: bash
+        run: |
+          cp publish/PrinterCollector.exe "PrinterCollector-${{ steps.ver.outputs.version }}.exe"
+          ls -lh PrinterCollector-*
+
+      - name: Upload artifacts (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrinterCollector-${{ steps.ver.outputs.version }}
+          path: |
+            PrinterCollector-*.exe
+            PrinterCollector-*.msi
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            PrinterCollector-*.exe
+            PrinterCollector-*.msi
+          generate_release_notes: true
+          draft: false
+          prerelease: false

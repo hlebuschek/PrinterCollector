@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package
+      Name="PrinterCollector"
+      Manufacturer="Sosnin Alexey"
+      Version="$(var.Version)"
+      UpgradeCode="F63FDD7C-15AC-44B6-BBCE-883E4D5D67E3"
+      Scope="perMachine"
+      Compressed="yes"
+      InstallerVersion="500">
+
+    <SummaryInformation Description="USB Printer page-counter collector agent" />
+
+    <MajorUpgrade
+        DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+        Schedule="afterInstallInitialize" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Feature Id="Main" Title="PrinterCollector" Level="1" AllowAdvertise="no" Display="expand">
+      <ComponentGroupRef Id="AppComponents" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="PrinterCollector" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="PrinterCollector" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+      <Component Bitness="always64">
+        <File Id="PrinterCollectorExe"
+              Source="$(var.PublishDir)\PrinterCollector.exe"
+              KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut"
+               Directory="ApplicationProgramsFolder"
+               Guid="A0F39EE5-2C1A-4F8B-9F0D-7E2C5B1D4A02">
+      <Shortcut Id="AppStartMenuShortcut"
+                Name="PrinterCollector"
+                Description="USB Printer page-counter collector agent"
+                Target="[INSTALLFOLDER]PrinterCollector.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="CleanupShortcutFolder" On="uninstall" />
+      <RegistryValue Root="HKLM"
+                     Key="Software\PrinterCollector"
+                     Name="Installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+  </Package>
+</Wix>
