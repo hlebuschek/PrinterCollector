@@ -53,8 +53,10 @@ jobs:
           -p:FileVersion=${{ steps.ver.outputs.version }}.0
           -o publish
 
-      - name: Install WiX 4
-        run: dotnet tool install --global wix
+      - name: Install WiX 5
+        # WiX v7 требует принять платную OSMF EULA. Закрепляем v5 — последняя
+        # бесплатная версия, синтаксис .wxs совместим (namespace v4/v5).
+        run: dotnet tool install --global wix --version 5.0.2
 
       - name: Build MSI
         run: >
